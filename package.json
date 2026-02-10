@@ -1,0 +1,12 @@
+{
+  "name": "skylark-drone-ops",
+  "version": "1.0.0",
+  "description": "AI Drone Operations Coordinator",
+  "main": "main.py",
+  "scripts": {
+    "start": "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"
+  },
+  "engines": {
+    "python": "3.10"
+  }
+}

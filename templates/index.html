@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skylark Drone Operations Coordinator</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        .chat-container {
+            height: calc(100vh - 280px);
+        }
+        .message-content {
+            white-space: pre-wrap;
+        }
+        .message-content ul, .message-content ol {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .message-content li {
+            margin-bottom: 0.25rem;
+        }
+        .message-content strong {
+            font-weight: 600;
+        }
+        .message-content p {
+            margin-bottom: 0.5rem;
+        }
+        .typing-indicator span {
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .quick-action:hover {
+            background-color: #4F46E5;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-indigo-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-helicopter text-2xl"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">Skylark Drone Operations</h1>
+                        <p class="text-indigo-200 text-sm">AI Coordinator Agent</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span id="connection-status" class="flex items-center text-sm">
+                        <span class="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                        Connected
+                    </span>
+                    <button onclick="loadDashboard()" class="bg-indigo-500 hover:bg-indigo-400 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-sync-alt mr-1"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card bg-white rounded-lg shadow p-4 transition-all duration-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Pilots</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-pilots">-</p>
+                        <p class="text-green-600 text-xs" id="stat-pilots-available">- available</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <i class="fas fa-user-tie text-blue-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card bg-white rounded-lg shadow p-4 transition-all duration-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Drones</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-drones">-</p>
+                        <p class="text-green-600 text-xs" id="stat-drones-available">- available</p>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-full">
+                        <i class="fas fa-drone text-purple-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card bg-white rounded-lg shadow p-4 transition-all duration-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Projects</p>
+                        <p class="text-2xl font-bold text-gray-800" id="stat-projects">-</p>
+                        <p class="text-blue-600 text-xs" id="stat-projects-active">- active</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <i class="fas fa-project-diagram text-green-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card bg-white rounded-lg shadow p-4 transition-all duration-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-500 text-sm">Conflicts</p>
+                        <p class="text-2xl font-bold" id="stat-conflicts">-</p>
+                        <p class="text-red-600 text-xs" id="stat-conflicts-critical">- critical</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Chat Interface -->
+            <div class="lg:col-span-3 bg-white rounded-lg shadow-lg overflow-hidden">
+                <div class="bg-gray-50 border-b px-4 py-3">
+                    <h2 class="font-semibold text-gray-800">
+                        <i class="fas fa-robot mr-2 text-indigo-600"></i>
+                        Operations Coordinator
+                    </h2>
+                </div>
+                
+                <!-- Chat Messages -->
+                <div id="chat-messages" class="chat-container overflow-y-auto p-4 space-y-4">
+                    <!-- Welcome message -->
+                    <div class="flex items-start space-x-3">
+                        <div class="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-robot text-sm"></i>
+                        </div>
+                        <div class="bg-gray-100 rounded-lg p-3 max-w-3xl">
+                            <div class="message-content text-gray-800">
+                                <strong>👋 Welcome to Skylark Drone Operations!</strong>
+                                <p class="mt-2">I'm your AI coordinator. I can help you with:</p>
+                                <ul class="list-disc ml-4 mt-2">
+                                    <li>Viewing pilot availability and assignments</li>
+                                    <li>Checking drone fleet status</li>
+                                    <li>Detecting scheduling conflicts</li>
+                                    <li>Handling urgent reassignments</li>
+                                    <li>Updating pilot/drone status (syncs to Google Sheets)</li>
+                                </ul>
+                                <p class="mt-2">Try asking: <em>"Show me available pilots"</em> or <em>"Check for conflicts"</em></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="border-t p-4">
+                    <form id="chat-form" class="flex space-x-2">
+                        <input 
+                            type="text" 
+                            id="chat-input" 
+                            placeholder="Ask about pilots, drones, projects, or conflicts..."
+                            class="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            autocomplete="off"
+                        >
+                        <button 
+                            type="submit" 
+                            class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors"
+                        >
+                            <i class="fas fa-paper-plane mr-2"></i>Send
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Quick Actions Sidebar -->
+            <div class="space-y-4">
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">
+                        <i class="fas fa-bolt mr-2 text-yellow-500"></i>Quick Actions
+                    </h3>
+                    <div class="space-y-2">
+                        <button onclick="sendQuickMessage('Show all available pilots')" 
+                            class="quick-action w-full text-left px-3 py-2 rounded border border-gray-200 text-sm hover:border-indigo-500 transition-all">
+                            <i class="fas fa-users mr-2 text-blue-500"></i>Available Pilots
+                        </button>
+                        <button onclick="sendQuickMessage('Show all available drones')" 
+                            class="quick-action w-full text-left px-3 py-2 rounded border border-gray-200 text-sm hover:border-indigo-500 transition-all">
+                            <i class="fas fa-drone mr-2 text-purple-500"></i>Available Drones
+                        </button>
+                        <button onclick="sendQuickMessage('Check for any conflicts or issues')" 
+                            class="quick-action w-full text-left px-3 py-2 rounded border border-gray-200 text-sm hover:border-indigo-500 transition-all">
+                            <i class="fas fa-exclamation-circle mr-2 text-red-500"></i>Check Conflicts
+                        </button>
+                        <button onclick="sendQuickMessage('Show all current projects')" 
+                            class="quick-action w-full text-left px-3 py-2 rounded border border-gray-200 text-sm hover:border-indigo-500 transition-all">
+                            <i class="fas fa-clipboard-list mr-2 text-green-500"></i>View Projects
+                        </button>
+                        <button onclick="sendQuickMessage('I need help with an urgent reassignment')" 
+                            class="quick-action w-full text-left px-3 py-2 rounded border border-gray-200 text-sm hover:border-indigo-500 transition-all">
+                            <i class="fas fa-ambulance mr-2 text-orange-500"></i>Urgent Reassignment
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow p-4">
+                    <h3 class="font-semibold text-gray-800 mb-3">
+                        <i class="fas fa-lightbulb mr-2 text-yellow-500"></i>Example Queries
+                    </h3>
+                    <div class="text-xs text-gray-600 space-y-2">
+                        <p class="cursor-pointer hover:text-indigo-600" onclick="sendQuickMessage('Find pilots with Thermal Imaging certification')">
+                            • Find pilots with thermal cert
+                        </p>
+                        <p class="cursor-pointer hover:text-indigo-600" onclick="sendQuickMessage('Show drones in Mumbai')">
+                            • Show drones in Mumbai
+                        </p>
+                        <p class="cursor-pointer hover:text-indigo-600" onclick="sendQuickMessage('Set pilot P001 status to On Leave')">
+                            • Update pilot status
+                        </p>
+                        <p class="cursor-pointer hover:text-indigo-600" onclick="sendQuickMessage('Pilot P002 is sick, find replacement for Project Alpha')">
+                            • Emergency replacement
+                        </p>
+                        <p class="cursor-pointer hover:text-indigo-600" onclick="sendQuickMessage('Flag drone D003 for maintenance - motor issue')">
+                            • Flag maintenance issue
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg shadow p-4 text-white">
+                    <h3 class="font-semibold mb-2">
+                        <i class="fas fa-info-circle mr-2"></i>Pro Tip
+                    </h3>
+                    <p class="text-sm text-indigo-100">
+                        Ask follow-up questions! The agent remembers your conversation context for better assistance.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let sessionId = null;
+        const chatMessages = document.getElementById('chat-messages');
+        const chatForm = document.getElementById('chat-form');
+        const chatInput = document.getElementById('chat-input');
+
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/dashboard');
+                const data = await response.json();
+                
+                document.getElementById('stat-pilots').textContent = data.pilots.total;
+                document.getElementById('stat-pilots-available').textContent = `${data.pilots.available} available`;
+                
+                document.getElementById('stat-drones').textContent = data.drones.total;
+                document.getElementById('stat-drones-available').textContent = `${data.drones.available} available`;
+                
+                document.getElementById('stat-projects').textContent = data.projects.total;
+                document.getElementById('stat-projects-active').textContent = `${data.projects.active} active`;
+                
+                const conflictEl = document.getElementById('stat-conflicts');
+                conflictEl.textContent = data.conflicts.total;
+                conflictEl.className = data.conflicts.total > 0 ? 'text-2xl font-bold text-red-600' : 'text-2xl font-bold text-green-600';
+                document.getElementById('stat-conflicts-critical').textContent = `${data.conflicts.critical} critical`;
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // Add message to chat
+        function addMessage(content, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'flex items-start space-x-3' + (isUser ? ' justify-end' : '');
+            
+            if (isUser) {
+                messageDiv.innerHTML = `
+                    <div class="bg-indigo-600 text-white rounded-lg p-3 max-w-3xl">
+                        <div class="message-content">${escapeHtml(content)}</div>
+                    </div>
+                    <div class="bg-gray-300 text-gray-600 rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-user text-sm"></i>
+                    </div>
+                `;
+            } else {
+                const htmlContent = marked.parse(content);
+                messageDiv.innerHTML = `
+                    <div class="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
+                        <i class="fas fa-robot text-sm"></i>
+                    </div>
+                    <div class="bg-gray-100 rounded-lg p-3 max-w-3xl">
+                        <div class="message-content text-gray-800">${htmlContent}</div>
+                    </div>
+                `;
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Add typing indicator
+        function addTypingIndicator() {
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typing-indicator';
+            typingDiv.className = 'flex items-start space-x-3';
+            typingDiv.innerHTML = `
+                <div class="bg-indigo-600 text-white rounded-full w-8 h-8 flex items-center justify-center flex-shrink-0">
+                    <i class="fas fa-robot text-sm"></i>
+                </div>
+                <div class="bg-gray-100 rounded-lg p-3">
+                    <div class="typing-indicator flex space-x-1">
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                        <span class="w-2 h-2 bg-gray-400 rounded-full"></span>
+                    </div>
+                </div>
+            `;
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Remove typing indicator
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typing-indicator');
+            if (indicator) indicator.remove();
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Send message
+        async function sendMessage(message) {
+            if (!message.trim()) return;
+            
+            addMessage(message, true);
+            chatInput.value = '';
+            chatInput.disabled = true;
+            addTypingIndicator();
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        session_id: sessionId
+                    })
+                });
+                
+                const data = await response.json();
+                sessionId = data.session_id;
+                
+                removeTypingIndicator();
+                addMessage(data.response);
+                
+                // Refresh dashboard after actions
+                if (data.actions_taken && data.actions_taken.length > 0) {
+                    setTimeout(loadDashboard, 1000);
+                }
+            } catch (error) {
+                removeTypingIndicator();
+                addMessage('Sorry, I encountered an error. Please try again.');
+                console.error('Error:', error);
+            } finally {
+                chatInput.disabled = false;
+                chatInput.focus();
+            }
+        }
+
+        // Quick message
+        function sendQuickMessage(message) {
+            chatInput.value = message;
+            sendMessage(message);
+        }
+
+        // Form submit
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            sendMessage(chatInput.value);
+        });
+
+        // Load dashboard on page load
+        loadDashboard();
+        
+        // Refresh dashboard every 30 seconds
+        setInterval(loadDashboard, 30000);
+    </script>
+</body>
+</html>

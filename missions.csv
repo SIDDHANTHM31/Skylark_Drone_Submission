@@ -1,0 +1,4 @@
+project_id,client,location,required_skills,required_certs,start_date,end_date,priority
+PRJ001,Client A,Bangalore,Mapping,DGCA,2/6/26,2/8/26,High
+PRJ002,Client B,Mumbai,Inspection,"DGCA, Night Ops",2/7/26,2/9/26,Urgent
+PRJ003,Client C,Bangalore,Thermal,DGCA,2/10/26,2/12/26,Standard
